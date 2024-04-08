@@ -27,6 +27,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Flutter Demo',
       theme: ThemeData(
+        useMaterial3: true,
           colorScheme: const ColorScheme.light(primary: Colors.black)
       ),
       home: const SignInScreen(),
