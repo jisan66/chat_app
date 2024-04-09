@@ -1,6 +1,11 @@
+import 'package:chat_app/modal/userInfo_modal.dart';
+import 'package:chat_app/pages/chat_screen.dart';
 import 'package:chat_app/service/fireStore_database.dart';
+import 'package:chat_app/service/local_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+
+import '../global _variable.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -13,6 +18,20 @@ class _HomeScreenState extends State<HomeScreen> {
   bool searchBox = false;
   var querySearchList = [];
   var temSearchStore = [];
+
+  getSharedPref() async{
+    UserInfoModal userData = await SharedPreferenceStorage.getUserInfo();
+    myName = userData.name ?? "";
+    myUserName = userData.username ?? "";
+    myPhoto = userData.photo ?? "";
+    myEmail = userData.email ?? "";
+    myId = userData.id ?? "";
+  }
+
+  loadMyData() async{
+    await getSharedPref();
+    setState(() {});
+  }
 
   initSearch(String value) {
     if (value.isEmpty) {
@@ -39,13 +58,26 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       temSearchStore = [];
       querySearchList.forEach((element) {
-        if (element['username'].toString().startsWith(capitalizedValue)) {
+        if (element['username'].toString().toUpperCase().startsWith(capitalizedValue)) {
           setState(() {
             temSearchStore.add(element);
           });
         }
       });
     }
+  }
+
+  getChatRoomId(String a, String b){
+    if(a.substring(0,1).codeUnitAt(0)>b.substring(0,1).codeUnitAt(0))
+      {return "$b\_$a";}
+    else
+      {return "$a\_$b";}
+  }
+
+  @override
+  void initState() {
+    loadMyData();
+    super.initState();
   }
 
   @override
@@ -107,52 +139,76 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemCount: temSearchStore.length,
                         itemBuilder: (context, index) {
                           Map<String, dynamic> item = temSearchStore[index];
-                          return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Row(
-                                // crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(
-                                    height: 60,
-                                  ),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(100),
-                                    child: Image.asset(
-                                      "assets/images/person1.jpg",
-                                      fit: BoxFit.cover,
-                                      height: 50,
-                                      width: 50,
+                          return GestureDetector(
+                            onTap: () async{
+                              searchBox = false;
+                              setState(() {
+
+                              });
+                              var chatRoomId = getChatRoomId(myUserName!, item['username']);
+                              Map<String, dynamic> chatRoomInfo = {
+                                'users' : [myUserName, item['username']]
+                              };
+                              await FireStoreDatabase().createChatRoom(chatRoomId, chatRoomInfo);
+                              if(mounted){
+                                Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => ChatScreen(
+                                              name: item["name"],
+                                              userName: item["username"],
+                                              photo: item["photo"],
+                                          chatRoomId: chatRoomId,
+                                            )));
+                              }
+                            },
+                            child: Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Row(
+                                  // crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const SizedBox(
+                                      height: 60,
                                     ),
-                                  ),
-                                  SizedBox(
-                                    width: size.width / 40,
-                                  ),
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        item['name'].toString(),
-                                        style: TextStyle(fontSize: 16),
+                                    ClipRRect(
+                                      borderRadius: BorderRadius.circular(100),
+                                      child: Image.asset(
+                                        "assets/images/person1.jpg",
+                                        fit: BoxFit.cover,
+                                        height: 50,
+                                        width: 50,
                                       ),
-                                      const SizedBox(
-                                        height: 8,
-                                      ),
-                                      Text(
-                                        item['username'],
+                                    ),
+                                    SizedBox(
+                                      width: size.width / 40,
+                                    ),
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          item['name'].toString(),
+                                          style: TextStyle(fontSize: 16),
+                                        ),
+                                        const SizedBox(
+                                          height: 8,
+                                        ),
+                                        Text(
+                                          item['username'],
+                                          style: TextStyle(
+                                              color:
+                                                  Colors.black.withOpacity(.51)),
+                                        )
+                                      ],
+                                    ),
+                                    const Spacer(),
+                                    Text("04.22PM",
                                         style: TextStyle(
-                                            color:
-                                                Colors.black.withOpacity(.51)),
-                                      )
-                                    ],
-                                  ),
-                                  const Spacer(),
-                                  Text("04.22PM",
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.black.withOpacity(.51)))
-                                ],
+                                            fontSize: 12,
+                                            color: Colors.black.withOpacity(.51)))
+                                  ],
+                                ),
                               ),
                             ),
                           );

@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:chat_app/modal/userInfo_modal.dart';
 import 'package:chat_app/pages/signin_screen.dart';
 import 'package:chat_app/service/fireStore_database.dart';
@@ -15,6 +14,13 @@ class SignUpScreen extends StatefulWidget {
 }
 
 class _SignUpScreenState extends State<SignUpScreen> {
+
+  final _chars = 'AaBbCcDdEeFfGgHhIiJjKkLlMmNnOoPpQqRrSsTtUuVvWwXxYyZz1234567890';
+  Random _rnd = Random();
+
+  String getRandomString(int length) => String.fromCharCodes(Iterable.generate(
+      length, (_) => _chars.codeUnitAt(_rnd.nextInt(_chars.length))));
+
   bool? check1 = false;
   bool hidePass = true;
   bool isLoading = false;
@@ -36,7 +42,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
         UserCredential userCredential = await FirebaseAuth.instance
             .createUserWithEmailAndPassword(email: email, password: password);
 
-        String id = Random().nextInt(10).toString();
+        String id = getRandomString(10);
         String user = emailController.text.replaceAll("@gmail.com", "");
         String userName = user.replaceFirst(user[0], user[0].toUpperCase());
         String firstLetter = user.substring(0,1).toUpperCase();
