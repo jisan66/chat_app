@@ -51,10 +51,12 @@ class _SignInScreenState extends State<SignInScreen> {
 
       await SharedPreferenceStorage.saveUserInfo(userInfoModal);
 
-      Navigator.pushAndRemoveUntil(
-          context,
-          MaterialPageRoute(builder: (context) => const HomeScreen()),
-          (route) => false);
+      if(mounted){
+        Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => const HomeScreen()),
+            (route) => false);
+      }
     } on FirebaseAuthException catch (e) {
       if (e.code == 'user-not-found') {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -80,7 +82,7 @@ class _SignInScreenState extends State<SignInScreen> {
               Container(
                 height: size.height * .65,
                 child: Card(
-                  margin: EdgeInsets.symmetric(horizontal: 20),
+                  margin: const EdgeInsets.symmetric(horizontal: 20),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 12.0, vertical: 16),

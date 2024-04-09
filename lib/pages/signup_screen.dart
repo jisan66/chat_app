@@ -37,9 +37,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
             .createUserWithEmailAndPassword(email: email, password: password);
 
         String id = Random().nextInt(10).toString();
+        String user = emailController.text.replaceAll("@gmail.com", "");
+        String userName = user.replaceFirst(user[0], user[0].toUpperCase());
+        String firstLetter = user.substring(0,1).toUpperCase();
         UserInfoModal userInfo = UserInfoModal(name: nameController.text,
-            username: emailController.text.replaceAll("@gmail.com", ""),
+            username: userName.toUpperCase(),
             email: emailController.text,
+            firstLetter: firstLetter.toUpperCase(),
             password: passwordController.text,
             photo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRWzt3Izh2jMM-3ed5bT5v0RZzT0UcdQd9Xg7MnkHCSyQ&s",
             id: id);

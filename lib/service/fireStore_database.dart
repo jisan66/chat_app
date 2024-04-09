@@ -18,4 +18,8 @@ class FireStoreDatabase {
         .where('email', isEqualTo: email)
         .get();
   }
+
+  Future<QuerySnapshot> searchUser(String userName) async{
+    return await FirebaseFirestore.instance.collection("user").where("first_letter", isEqualTo: userName.substring(0,1)).get();
+  }
 }
