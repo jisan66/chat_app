@@ -1,6 +1,7 @@
 import 'package:chat_app/pages/chat_screen.dart';
 import 'package:chat_app/pages/home_screen.dart';
 import 'package:chat_app/pages/signin_screen.dart';
+import 'package:chat_app/splash_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 
@@ -30,7 +31,7 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
           colorScheme: const ColorScheme.light(primary: Colors.black)
       ),
-      home: const SignInScreen(),
+      home: const SplashScreen(),
     );
   }
 }

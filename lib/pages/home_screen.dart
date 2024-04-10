@@ -1,5 +1,6 @@
 import 'package:chat_app/modal/userInfo_modal.dart';
 import 'package:chat_app/pages/chat_screen.dart';
+import 'package:chat_app/pages/signin_screen.dart';
 import 'package:chat_app/service/fireStore_database.dart';
 import 'package:chat_app/service/local_database.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -18,8 +19,9 @@ class _HomeScreenState extends State<HomeScreen> {
   bool searchBox = false;
   var querySearchList = [];
   var temSearchStore = [];
+  Stream? chatRoomStream;
 
-  getSharedPref() async{
+  getSharedPref() async {
     UserInfoModal userData = await SharedPreferenceStorage.getUserInfo();
     myName = userData.name ?? "";
     myUserName = userData.username ?? "";
@@ -28,8 +30,9 @@ class _HomeScreenState extends State<HomeScreen> {
     myId = userData.id ?? "";
   }
 
-  loadMyData() async{
+  loadMyData() async {
     await getSharedPref();
+    chatRoomStream = await FireStoreDatabase().getChatRooms();
     setState(() {});
   }
 
@@ -58,7 +61,10 @@ class _HomeScreenState extends State<HomeScreen> {
     } else {
       temSearchStore = [];
       querySearchList.forEach((element) {
-        if (element['username'].toString().toUpperCase().startsWith(capitalizedValue)) {
+        if (element['username']
+            .toString()
+            .toUpperCase()
+            .startsWith(capitalizedValue)) {
           setState(() {
             temSearchStore.add(element);
           });
@@ -67,16 +73,43 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  getChatRoomId(String a, String b){
-    if(a.substring(0,1).codeUnitAt(0)>b.substring(0,1).codeUnitAt(0))
-      {return "$b\_$a";}
-    else
-      {return "$a\_$b";}
+  String getChatRoomId(String a, String b) {
+    if (a.compareTo(b) < 0) {
+      return "$a\_$b";
+    } else {
+      return "$b\_$a";
+    }
+  }
+
+  Widget chatRoomList() {
+    return StreamBuilder(
+        stream: chatRoomStream,
+        builder: (context, AsyncSnapshot snapshot) {
+          return snapshot.hasData
+              ? ListView.builder(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: snapshot.data.docs.length,
+                  itemBuilder: (context, index) {
+                    print(
+                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
+                    DocumentSnapshot ds = snapshot.data.docs[index];
+                    return ChatRoomListTile(
+                        chatRoomId: ds.id,
+                        lastMessage: ds['lastMessage'],
+                        time: ds['lastMessageSendTs']);
+                  })
+              : const Center(
+                  child: CircularProgressIndicator(),
+                );
+        });
   }
 
   @override
   void initState() {
     loadMyData();
+    print(myUserName);
+    print(myName);
     super.initState();
   }
 
@@ -140,17 +173,21 @@ class _HomeScreenState extends State<HomeScreen> {
                         itemBuilder: (context, index) {
                           Map<String, dynamic> item = temSearchStore[index];
                           return GestureDetector(
-                            onTap: () async{
+                            onTap: () async {
                               searchBox = false;
-                              setState(() {
-
-                              });
-                              var chatRoomId = getChatRoomId(myUserName!, item['username']);
+                              // setState(() {});
+                              var chatRoomId =
+                                  getChatRoomId(myUserName, item['username']);
                               Map<String, dynamic> chatRoomInfo = {
-                                'users' : [myUserName, item['username']]
+                                'user': [myUserName, item['username']]
                               };
-                              await FireStoreDatabase().createChatRoom(chatRoomId, chatRoomInfo);
-                              if(mounted){
+                              await FireStoreDatabase()
+                                  .createChatRoom(chatRoomId, chatRoomInfo);
+                              setState(() {});
+                              print(
+                                  'name: ${item["name"]},userName: ${item["username"]},photo: ${item["photo"]},chatRoomId: $chatRoomId,');
+
+                              if (mounted) {
                                 Navigator.push(
                                     context,
                                     MaterialPageRoute(
@@ -158,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                               name: item["name"],
                                               userName: item["username"],
                                               photo: item["photo"],
-                                          chatRoomId: chatRoomId,
+                                              chatRoomId: chatRoomId,
                                             )));
                               }
                             },
@@ -197,75 +234,162 @@ class _HomeScreenState extends State<HomeScreen> {
                                         Text(
                                           item['username'],
                                           style: TextStyle(
-                                              color:
-                                                  Colors.black.withOpacity(.51)),
+                                              color: Colors.black
+                                                  .withOpacity(.51)),
                                         )
                                       ],
                                     ),
-                                    const Spacer(),
-                                    Text("04.22PM",
-                                        style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.black.withOpacity(.51)))
                                   ],
                                 ),
                               ),
                             ),
                           );
                         })
-                    : ListView.builder(
-                        itemCount: 5,
-                        itemBuilder: (context, index) {
-                          return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: Row(
-                                // crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const SizedBox(
-                                    height: 60,
-                                  ),
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(100),
-                                    child: Image.asset(
-                                      "assets/images/person1.jpg",
-                                      fit: BoxFit.cover,
-                                      height: 50,
-                                      width: 50,
-                                    ),
-                                  ),
-                                  SizedBox(
-                                    width: size.width / 40,
-                                  ),
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      const Text(
-                                        "Jisan Saha",
-                                        style: TextStyle(fontSize: 16),
-                                      ),
-                                      const SizedBox(
-                                        height: 8,
-                                      ),
-                                      Text(
-                                        "How are You",
-                                        style: TextStyle(
-                                            color:
-                                                Colors.black.withOpacity(.51)),
-                                      )
-                                    ],
-                                  ),
-                                  const Spacer(),
-                                  Text("04.22PM",
-                                      style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.black.withOpacity(.51)))
-                                ],
-                              ),
-                            ),
-                          );
-                        })),
+                    : chatRoomList()),
+          ),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: (){
+          SharedPreferenceStorage.clearUserInfo();
+          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context)=>SignInScreen()), (route) => false);
+        },
+        child: Icon(Icons.logout_outlined),
+      ),
+    );
+  }
+}
+
+class ChatRoomListTile extends StatefulWidget {
+  String? lastMessage, chatRoomId, time;
+
+  ChatRoomListTile(
+      {super.key,
+      required this.chatRoomId,
+      required this.lastMessage,
+      required this.time});
+
+  @override
+  State<ChatRoomListTile> createState() => _ChatRoomListTileState();
+}
+
+class _ChatRoomListTileState extends State<ChatRoomListTile> {
+  String photo = '', name = '', username = '', id = '';
+  bool isLoading = false;
+
+  getThisUserInfo() async {
+    setState(() {
+      isLoading = true;
+    });
+
+    print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu  photo = $photo");
+    if (widget.chatRoomId == '${myUserName}_$myUserName') {
+      username = myUserName;
+    } else {
+      username =
+          widget.chatRoomId!.replaceAll("_", "").replaceAll(myUserName, "");
+    }
+    print("Fetching user info for username: $username");
+    QuerySnapshot userData =
+        await FireStoreDatabase().getUserInfo(username.toUpperCase());
+    setState(() {
+      name = userData.docs[0]['name'];
+      photo = userData.docs[0]['photo'];
+      id = userData.docs[0]['id'];
+      isLoading = false;
+    });
+    print("User info fetched successfully: name=$name, photo=$photo");
+    print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu  photo = $photo");
+  }
+
+  loadInfo() async {
+    await getThisUserInfo();
+  }
+
+  @override
+  void initState() {
+    loadInfo();
+    super.initState();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    Size size = MediaQuery.of(context).size;
+    return GestureDetector(
+      onTap: () async{
+
+        Map<String, dynamic> chatRoomInfo = {
+          'user': [myUserName, username]
+        };
+        await FireStoreDatabase()
+            .createChatRoom(widget.chatRoomId!, chatRoomInfo);
+        setState(() {});
+        if(mounted){
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (context) => ChatScreen(
+                        name: name,
+                        userName: username,
+                        photo: photo,
+                        chatRoomId: widget.chatRoomId,
+                      )));
+        }
+        print("ame: $name,userName: $username,photo: $photo,chatRoomId: ${widget.chatRoomId},aaaaaaaaaaaauuuuuuuuuuuuuuuuuuuuuu");
+      },
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            // crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              isLoading
+                  ? const SizedBox(
+                      height: 50,
+                      width: 50,
+                      child: LinearProgressIndicator(),
+                    )
+                  : ClipRRect(
+                      borderRadius: BorderRadius.circular(100),
+                      child: Image.network(
+                        photo,
+                        fit: BoxFit.cover,
+                        height: 50,
+                        width: 50,
+                      ),
+                    ),
+              SizedBox(
+                width: size.width / 40,
+              ),
+              Expanded(
+                flex: 4,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      name,
+                      style: const TextStyle(fontSize: 16),
+                    ),
+                    const SizedBox(
+                      height: 8,
+                    ),
+                    Text(
+                      widget.lastMessage ?? '',
+                      style: TextStyle(
+                        overflow: TextOverflow.ellipsis,
+                          color: Colors.black.withOpacity(.51)),
+                    )
+                  ],
+                ),
+              ),
+              const Spacer(),
+              Expanded(
+                flex: 1,
+                child: Text(widget.time ?? '',
+                    style: TextStyle(
+                        fontSize: 12, color: Colors.black.withOpacity(.51))),
+              )
+            ],
           ),
         ),
       ),

@@ -13,4 +13,16 @@ class SharedPreferenceStorage{
     String? value = prefs.getString("user_info");
     return UserInfoModal.fromJson(jsonDecode(value ?? ''));
   }
+
+  static Future<bool> checkIfLoggedIn() async{
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    bool isLogin = prefs.containsKey("user_info");
+    if(isLogin == true){
+    }
+    return isLogin;
+  }
+  static Future<void> clearUserInfo() async{
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    prefs.clear();
+  }
 }
