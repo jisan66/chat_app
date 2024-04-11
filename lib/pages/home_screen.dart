@@ -9,7 +9,7 @@ import 'package:flutter/material.dart';
 import '../global _variable.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  const HomeScreen({Key? key});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -83,26 +83,54 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Widget chatRoomList() {
     return StreamBuilder(
-        stream: chatRoomStream,
-        builder: (context, AsyncSnapshot snapshot) {
-          return snapshot.hasData
-              ? ListView.builder(
-                  padding: EdgeInsets.zero,
-                  shrinkWrap: true,
-                  itemCount: snapshot.data.docs.length,
-                  itemBuilder: (context, index) {
-                    print(
-                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa");
-                    DocumentSnapshot ds = snapshot.data.docs[index];
+      stream: chatRoomStream,
+      builder: (context, AsyncSnapshot snapshot) {
+        if (snapshot.hasData) {
+          return ListView.builder(
+            padding: EdgeInsets.zero,
+            shrinkWrap: true,
+            itemCount: snapshot.data.docs.length,
+            itemBuilder: (context, index) {
+              DocumentSnapshot ds = snapshot.data.docs[index];
+              String chatRoomId = ds.id;
+              String lastMessage = ds['lastMessage'];
+              String time = ds['lastMessageSendTs'];
+
+              // Fetch user information for the current chat room
+              return FutureBuilder(
+                future: FireStoreDatabase().getUserInfo(getUsernameFromChatRoomId(chatRoomId)),
+                builder: (context, AsyncSnapshot<QuerySnapshot> userSnapshot) {
+                  if (userSnapshot.connectionState == ConnectionState.waiting) {
+                    return LinearProgressIndicator();
+                  } else if (userSnapshot.hasError) {
+                    return Text('Error: ${userSnapshot.error}');
+                  } else {
+                    String name = userSnapshot.data!.docs[0]['name'];
+                    String photo = userSnapshot.data!.docs[0]['photo'];
+
                     return ChatRoomListTile(
-                        chatRoomId: ds.id,
-                        lastMessage: ds['lastMessage'],
-                        time: ds['lastMessageSendTs']);
-                  })
-              : const Center(
-                  child: CircularProgressIndicator(),
-                );
-        });
+                      chatRoomId: chatRoomId,
+                      lastMessage: lastMessage,
+                      time: time,
+                      name: name,
+                      photo: photo,
+                    );
+                  }
+                },
+              );
+            },
+          );
+        } else {
+          return Center(child: CircularProgressIndicator());
+        }
+      },
+    );
+  }
+
+  // Helper function to extract username from chat room id
+  String getUsernameFromChatRoomId(String chatRoomId) {
+    List<String> parts = chatRoomId.split('_');
+    return parts.first == myUserName ? parts.last : parts.first;
   }
 
   @override
@@ -119,27 +147,27 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title:
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
           searchBox
               ? Expanded(
-                  flex: 10,
-                  child: TextFormField(
-                    onChanged: (value) {
-                      initSearch(value.toUpperCase());
+            flex: 10,
+            child: TextFormField(
+              onChanged: (value) {
+                initSearch(value.toUpperCase());
+              },
+              decoration: InputDecoration(
+                  border: const OutlineInputBorder(
+                      borderSide: BorderSide.none),
+                  suffixIcon: IconButton(
+                    onPressed: () {
+                      searchBox = false;
+                      setState(() {});
                     },
-                    decoration: InputDecoration(
-                        border: const OutlineInputBorder(
-                            borderSide: BorderSide.none),
-                        suffixIcon: IconButton(
-                          onPressed: () {
-                            searchBox = false;
-                            setState(() {});
-                          },
-                          icon: const Icon(Icons.close),
-                        ),
-                        hintText: "Search"),
+                    icon: const Icon(Icons.close),
                   ),
-                )
+                  hintText: "Search"),
+            ),
+          )
               : const Expanded(flex: 10, child: Text("Chat App")),
           Expanded(
             flex: 1,
@@ -164,95 +192,97 @@ class _HomeScreenState extends State<HomeScreen> {
             decoration: BoxDecoration(
                 color: Colors.grey.shade300,
                 borderRadius:
-                    const BorderRadius.only(topLeft: Radius.circular(16))),
+                const BorderRadius.only(topLeft: Radius.circular(16))),
             child: Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: searchBox
-                    ? ListView.builder(
-                        itemCount: temSearchStore.length,
-                        itemBuilder: (context, index) {
-                          Map<String, dynamic> item = temSearchStore[index];
-                          return GestureDetector(
-                            onTap: () async {
-                              searchBox = false;
-                              // setState(() {});
-                              var chatRoomId =
-                                  getChatRoomId(myUserName, item['username']);
-                              Map<String, dynamic> chatRoomInfo = {
-                                'user': [myUserName, item['username']]
-                              };
-                              await FireStoreDatabase()
-                                  .createChatRoom(chatRoomId, chatRoomInfo);
-                              setState(() {});
-                              print(
-                                  'name: ${item["name"]},userName: ${item["username"]},photo: ${item["photo"]},chatRoomId: $chatRoomId,');
-
-                              if (mounted) {
-                                Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) => ChatScreen(
-                                              name: item["name"],
-                                              userName: item["username"],
-                                              photo: item["photo"],
-                                              chatRoomId: chatRoomId,
-                                            )));
-                              }
-                            },
-                            child: Card(
-                              child: Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: Row(
-                                  // crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(
-                                      height: 60,
-                                    ),
-                                    ClipRRect(
-                                      borderRadius: BorderRadius.circular(100),
-                                      child: Image.asset(
-                                        "assets/images/person1.jpg",
-                                        fit: BoxFit.cover,
-                                        height: 50,
-                                        width: 50,
-                                      ),
-                                    ),
-                                    SizedBox(
-                                      width: size.width / 40,
-                                    ),
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          item['name'].toString(),
-                                          style: TextStyle(fontSize: 16),
-                                        ),
-                                        const SizedBox(
-                                          height: 8,
-                                        ),
-                                        Text(
-                                          item['username'],
-                                          style: TextStyle(
-                                              color: Colors.black
-                                                  .withOpacity(.51)),
-                                        )
-                                      ],
-                                    ),
-                                  ],
-                                ),
+              padding: const EdgeInsets.all(8.0),
+              child: searchBox
+                  ? ListView.builder(
+                  itemCount: temSearchStore.length,
+                  itemBuilder: (context, index) {
+                    Map<String, dynamic> item = temSearchStore[index];
+                    return GestureDetector(
+                      onTap: () async {
+                        searchBox = false;
+                        var chatRoomId =
+                        getChatRoomId(myUserName, item['username']);
+                        Map<String, dynamic> chatRoomInfo = {
+                          'user': [myUserName, item['username']]
+                        };
+                        await FireStoreDatabase()
+                            .createChatRoom(chatRoomId, chatRoomInfo);
+                        setState(() {});
+                        if (mounted) {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ChatScreen(
+                                name: item["name"],
+                                userName: item["username"],
+                                photo: item["photo"],
+                                chatRoomId: chatRoomId,
                               ),
                             ),
                           );
-                        })
-                    : chatRoomList()),
+                        }
+                      },
+                      child: Card(
+                        child: Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Row(
+                            children: [
+                              const SizedBox(
+                                height: 60,
+                              ),
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(100),
+                                child: Image.asset(
+                                  "assets/images/person1.png",
+                                  fit: BoxFit.cover,
+                                  height: 50,
+                                  width: 50,
+                                ),
+                              ),
+                              SizedBox(
+                                width: size.width / 40,
+                              ),
+                              Column(
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    item['name'].toString(),
+                                    style: TextStyle(fontSize: 16),
+                                  ),
+                                  const SizedBox(
+                                    height: 8,
+                                  ),
+                                  Text(
+                                    item['username'],
+                                    style: TextStyle(
+                                        color:
+                                        Colors.black.withOpacity(.51)),
+                                  )
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    );
+                  })
+                  : chatRoomList(),
+            ),
           ),
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: (){
+        onPressed: () {
           SharedPreferenceStorage.clearUserInfo();
-          Navigator.pushAndRemoveUntil(context, MaterialPageRoute(builder: (context)=>SignInScreen()), (route) => false);
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => SignInScreen()),
+                (route) => false,
+          );
         },
         child: Icon(Icons.logout_outlined),
       ),
@@ -261,113 +291,71 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class ChatRoomListTile extends StatefulWidget {
-  String? lastMessage, chatRoomId, time;
+  String? lastMessage, chatRoomId, time, name, photo;
 
-  ChatRoomListTile(
-      {super.key,
-      required this.chatRoomId,
-      required this.lastMessage,
-      required this.time});
+  ChatRoomListTile({
+    Key? key,
+    required this.chatRoomId,
+    required this.lastMessage,
+    required this.time,
+    required this.name,
+    required this.photo,
+  }) : super(key: key);
 
   @override
   State<ChatRoomListTile> createState() => _ChatRoomListTileState();
 }
 
 class _ChatRoomListTileState extends State<ChatRoomListTile> {
-  String photo = '', name = '', username = '', id = '';
-  bool isLoading = false;
-
-  getThisUserInfo() async {
-    setState(() {
-      isLoading = true;
-    });
-
-    print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu  photo = $photo");
-    if (widget.chatRoomId == '${myUserName}_$myUserName') {
-      username = myUserName;
-    } else {
-      username =
-          widget.chatRoomId!.replaceAll("_", "").replaceAll(myUserName, "");
-    }
-    print("Fetching user info for username: $username");
-    QuerySnapshot userData =
-        await FireStoreDatabase().getUserInfo(username.toUpperCase());
-    setState(() {
-      name = userData.docs[0]['name'];
-      photo = userData.docs[0]['photo'];
-      id = userData.docs[0]['id'];
-      isLoading = false;
-    });
-    print("User info fetched successfully: name=$name, photo=$photo");
-    print("uuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuu  photo = $photo");
-  }
-
-  loadInfo() async {
-    await getThisUserInfo();
-  }
-
-  @override
-  void initState() {
-    loadInfo();
-    super.initState();
-  }
-
   @override
   Widget build(BuildContext context) {
     Size size = MediaQuery.of(context).size;
     return GestureDetector(
-      onTap: () async{
-
+      onTap: () async {
         Map<String, dynamic> chatRoomInfo = {
-          'user': [myUserName, username]
+          'user': [myUserName, getUsernameFromChatRoomId(widget.chatRoomId!)],
         };
         await FireStoreDatabase()
             .createChatRoom(widget.chatRoomId!, chatRoomInfo);
         setState(() {});
-        if(mounted){
+        if (mounted) {
           Navigator.push(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => ChatScreen(
-                        name: name,
-                        userName: username,
-                        photo: photo,
-                        chatRoomId: widget.chatRoomId,
-                      )));
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatScreen(
+                name: widget.name,
+                userName: getUsernameFromChatRoomId(widget.chatRoomId!),
+                photo: widget.photo,
+                chatRoomId: widget.chatRoomId,
+              ),
+            ),
+          );
         }
-        print("ame: $name,userName: $username,photo: $photo,chatRoomId: ${widget.chatRoomId},aaaaaaaaaaaauuuuuuuuuuuuuuuuuuuuuu");
       },
       child: Card(
         child: Padding(
           padding: const EdgeInsets.all(8.0),
           child: Row(
-            // crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              isLoading
-                  ? const SizedBox(
-                      height: 50,
-                      width: 50,
-                      child: LinearProgressIndicator(),
-                    )
-                  : ClipRRect(
-                      borderRadius: BorderRadius.circular(100),
-                      child: Image.network(
-                        photo,
-                        fit: BoxFit.cover,
-                        height: 50,
-                        width: 50,
-                      ),
-                    ),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(100),
+                child: Image.network(
+                  widget.photo!,
+                  fit: BoxFit.cover,
+                  height: 50,
+                  width: 50,
+                ),
+              ),
               SizedBox(
                 width: size.width / 40,
               ),
               Expanded(
-                flex: 4,
+                flex: 7,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      name,
+                      widget.name!,
                       style: const TextStyle(fontSize: 16),
                     ),
                     const SizedBox(
@@ -377,22 +365,33 @@ class _ChatRoomListTileState extends State<ChatRoomListTile> {
                       widget.lastMessage ?? '',
                       style: TextStyle(
                         overflow: TextOverflow.ellipsis,
-                          color: Colors.black.withOpacity(.51)),
-                    )
+                        color: Colors.black.withOpacity(.51),
+                      ),
+                    ),
                   ],
                 ),
               ),
-              const Spacer(),
+              Spacer(),
               Expanded(
-                flex: 1,
-                child: Text(widget.time ?? '',
-                    style: TextStyle(
-                        fontSize: 12, color: Colors.black.withOpacity(.51))),
-              )
+                flex: 2,
+                child: Text(
+                  widget.time ?? '',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.black.withOpacity(.51),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
     );
+  }
+
+  // Helper function to extract username from chat room id
+  String getUsernameFromChatRoomId(String chatRoomId) {
+    List<String> parts = chatRoomId.split('_');
+    return parts.first == myUserName ? parts.last : parts.first;
   }
 }

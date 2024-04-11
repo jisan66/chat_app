@@ -51,7 +51,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
             email: emailController.text,
             firstLetter: firstLetter.toUpperCase(),
             password: passwordController.text,
-            photo: "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcRWzt3Izh2jMM-3ed5bT5v0RZzT0UcdQd9Xg7MnkHCSyQ&s",
+            photo: "https://cdn-icons-png.flaticon.com/512/9421/9421017.png",
             id: id);
 
         await FireStoreDatabase().addUserInfo(userInfo, id);
